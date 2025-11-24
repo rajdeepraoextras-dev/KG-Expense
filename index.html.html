@@ -451,8 +451,8 @@
     </div>
 
 <script>
-// Pre-load with 30 expenses - DATA IS ALREADY HERE!
-let expenses = [
+// Pre-loaded expenses (only used if no data exists in localStorage)
+let defaultExpenses = [
 {expenseId:"EXP001",date:"2025-10-30",category:"Software",description:"Renflair App : 1 Month",amount:1602,whoPaid:"Abhishek Rao",payment:"UPI",vendor:"Renflair",approvedBy:"Rajdeep Rao",status:"Approved"},
 {expenseId:"EXP002",date:"2025-10-31",category:"Software",description:"Razorpay Activation Fees",amount:210,whoPaid:"Rajdeep Rao",payment:"UPI",vendor:"Razorpay",approvedBy:"Abhishek Rao",status:"Approved"},
 {expenseId:"EXP003",date:"2025-10-31",category:"Software",description:"Proton Drive : 200 GB",amount:140,whoPaid:"Rajdeep Rao",payment:"UPI",vendor:"Proton",approvedBy:"Abhishek Rao",status:"Approved"},
@@ -485,16 +485,23 @@ let expenses = [
 {expenseId:"EXP030",date:"2025-11-20",category:"Software",description:"LinkTree Subscription",amount:650,whoPaid:"Rajdeep Rao",payment:"UPI",vendor:"LinkTree",approvedBy:"Abhishek Rao",status:"Approved"}
 ];
 
+let expenses = [];
 let editIndex = -1;
 
-// Render data immediately on load!
+// FIXED: Load data from localStorage or use default data
 window.onload = function() {
     document.getElementById('date').value = new Date().toISOString().split('T')[0];
     
-    // Save to localStorage for persistence
-    localStorage.setItem('expenses', JSON.stringify(expenses));
+    // Load from localStorage if it exists, otherwise use preloaded data
+    const saved = localStorage.getItem('expenses');
+    if(saved) {
+        expenses = JSON.parse(saved);
+    } else {
+        // First time load - use the default 30 expenses
+        expenses = defaultExpenses;
+        save(); // Save the default data
+    }
     
-    // Render immediately
     render();
     
     document.getElementById('addBtn').onclick = function() {
