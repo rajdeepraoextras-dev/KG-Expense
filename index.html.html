@@ -166,7 +166,7 @@
                 <div class="breakdown-container">
                     <div class="breakdown-section">
                         <h3>Team Member Expenses (Adjusted Net)</h3>
-                        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">*Includes Transfers (Sender decreases, Receiver increases)</p>
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">*Includes Transfers (Sender increases, Receiver decreases)</p>
                         <div id="payerBreakdown" class="breakdown-list">
                             <p style="text-align: center; color: #999;">Loading...</p>
                         </div>
@@ -517,12 +517,12 @@
             const amt = parseFloat(e.amount);
 
             if (e.category === "Internal Transfer") {
-                // INTERNAL TRANSFER LOGIC (Confirmed as Correct):
-                // Sender (e.whoPaid) decreases their net spending.
-                // Receiver (e.vendor) increases their net spending.
+                // REVERSED INTERNAL TRANSFER LOGIC (Requested by User):
+                // Sender (e.whoPaid) INCREASES their net spending.
+                // Receiver (e.vendor) DECREASES their net spending.
                 
-                payers[e.whoPaid] = (payers[e.whoPaid] || 0) - amt;
-                payers[e.vendor] = (payers[e.vendor] || 0) + amt;
+                payers[e.whoPaid] = (payers[e.whoPaid] || 0) + amt; // Sender increases
+                payers[e.vendor] = (payers[e.vendor] || 0) - amt;   // Receiver decreases
                 
             } else {
                 // Normal Expense Logic:
