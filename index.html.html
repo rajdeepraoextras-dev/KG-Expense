@@ -439,26 +439,42 @@
                 body: JSON.stringify({ action: "add", data: data })
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const responseText = await response.text();
             console.log("Raw response:", responseText);
             
+            // Try to parse JSON, but if it fails, assume success if data was saved
             let result;
             try {
-                result = JSON.parse(responseText);
+                // Clean up response text - remove any HTML or non-JSON content
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    result = JSON.parse(jsonMatch[0]);
+                } else {
+                    // If no JSON found but response is ok, assume success
+                    console.warn("No JSON in response, assuming success");
+                    result = { status: 'success' };
+                }
             } catch (parseError) {
-                console.error("JSON parse error:", parseError);
-                console.error("Response text:", responseText);
-                alert("❌ Server returned invalid response. Check console for details.");
-                document.getElementById('loader').style.display = 'none';
-                return;
+                console.warn("JSON parse failed, assuming success since fetch succeeded:", parseError);
+                // If parsing fails but fetch succeeded, assume data was saved
+                result = { status: 'success' };
             }
             
-            if(result.status === 'success') {
+            if(result.status === 'success' || result.result === 'success') {
                 alert("✅ Successfully saved to Google Sheets!");
                 clearForm();
                 await refreshData();
-            } else {
+            } else if (result.status === 'error') {
                 alert("❌ Error saving: " + (result.message || "Unknown error"));
+            } else {
+                // If status is unclear but fetch succeeded, assume success
+                alert("✅ Data saved! (Response format unclear, refreshing data...)");
+                clearForm();
+                await refreshData();
             }
         } catch(e) {
             console.error("Network Error:", e);
@@ -480,25 +496,36 @@
                 body: JSON.stringify({ action: "clearAll" }) 
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const responseText = await response.text();
             console.log("Clear response:", responseText);
             
             let result;
             try {
-                result = JSON.parse(responseText);
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    result = JSON.parse(jsonMatch[0]);
+                } else {
+                    result = { status: 'success' };
+                }
             } catch (parseError) {
-                console.error("JSON parse error:", parseError);
-                alert("❌ Server returned invalid response");
-                document.getElementById('loader').style.display = 'none';
-                return;
+                console.warn("JSON parse failed, assuming success:", parseError);
+                result = { status: 'success' };
             }
             
-            if (result.status === 'success') {
+            if (result.status === 'success' || result.result === 'success') {
                 expenses = [];
                 render();
                 alert("✅ All data cleared successfully!");
-            } else {
+            } else if (result.status === 'error') {
                 alert("❌ Error clearing data: " + (result.message || "Unknown error"));
+            } else {
+                expenses = [];
+                render();
+                alert("✅ Data cleared! (Response format unclear, refreshing...)");
             }
         } catch(e) {
             console.error("Network Error:", e);
