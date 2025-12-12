@@ -45,7 +45,6 @@
         .stat-card .amount { font-size: 2em; font-weight: bold; margin-bottom: 5px; }
         .stat-card .detail { font-size: 0.85em; opacity: 0.85; }
         
-        /* Analytics & Breakdown */
         .analytics-section {
             background: #fff8f3;
             padding: 30px;
@@ -79,7 +78,6 @@
         .breakdown-bar { height: 100%; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); }
         .breakdown-stats { text-align: right; min-width: 120px; }
 
-        /* Form */
         .form-section {
             background: #fff8f3;
             padding: 30px;
@@ -111,22 +109,39 @@
             border: 2px solid #ffe5d9;
             border-radius: 8px;
         }
-        .btn { padding: 12px 30px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn { padding: 12px 30px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
         .btn-primary { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4); }
         .btn-secondary { background: #6c757d; color: white; margin-right: 10px;}
+        .btn-secondary:hover { background: #5a6268; }
         .btn-transfer { background: white; color: #1976d2; border: 2px solid #1976d2; }
         .btn-transfer.active { background: #1976d2; color: white; }
 
-        /* Table */
         .table-section { margin-top: 30px; }
         .table-wrapper { overflow-x: auto; border-radius: 10px; border: 2px solid #ffe5d9; }
         table { width: 100%; border-collapse: collapse; min-width: 1000px; }
         th { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 15px; text-align: left; }
         td { padding: 15px; border-bottom: 1px solid #ffe5d9; }
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.85em; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
         .status-Approved { background: #d4edda; color: #155724; }
+        .status-Pending { background: #fff3cd; color: #856404; }
         .status-Transfer { background: #cce5ff; color: #004085; font-weight: bold; }
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; justify-content: center; align-items: center; font-size: 2em; color: #ff6b35; font-weight: bold; }
+        .loading-overlay { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(255,255,255,0.9); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 2em; 
+            color: #ff6b35; 
+            font-weight: bold; 
+        }
+        .button-group { margin-top: 20px; text-align: right; }
     </style>
 </head>
 <body>
@@ -147,9 +162,9 @@
                     <div class="detail" id="totalCount">0 transactions</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Net Spending (Adj.)</h3>
+                    <h3>Net Spending</h3>
                     <div class="amount" id="netSpending">₹0.00</div>
-                    <div class="detail">Pre-Transfer Totals</div>
+                    <div class="detail">Adjusted for Transfers</div>
                 </div>
                 <div class="stat-card">
                     <h3>Approved</h3>
@@ -165,8 +180,8 @@
                 <h2>📊 Financial Breakdown</h2>
                 <div class="breakdown-container">
                     <div class="breakdown-section">
-                        <h3>Team Member Expenses (Adjusted Net)</h3>
-                        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">*Includes Transfers (Sender increases, Receiver decreases)</p>
+                        <h3>Team Member Net Expenses</h3>
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">*Adjusted for Internal Transfers</p>
                         <div id="payerBreakdown" class="breakdown-list">
                             <p style="text-align: center; color: #999;">Loading...</p>
                         </div>
@@ -193,7 +208,7 @@
                     </div>
                     <div class="form-group">
                         <label>Date</label>
-                        <input type="date" id="date">
+                        <input type="date" id="date" required>
                     </div>
                     
                     <div class="form-group normal-field">
@@ -211,7 +226,7 @@
 
                     <div class="form-group">
                         <label>Amount (₹)</label>
-                        <input type="number" id="amount" step="0.01" placeholder="0.00">
+                        <input type="number" id="amount" step="0.01" placeholder="0.00" required>
                     </div>
 
                     <div class="form-group">
@@ -265,7 +280,7 @@
                     <input type="text" id="description" placeholder="Details...">
                 </div>
 
-                <div class="button-group" style="margin-top: 20px; text-align: right;">
+                <div class="button-group">
                     <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
                     <button class="btn btn-primary" onclick="addExpense()">Save to Sheets</button>
                 </div>
@@ -299,16 +314,15 @@
     </div>
 
 <script>
-    // ✅ URL UPDATED AS REQUESTED
     const API_URL = "https://script.google.com/macros/s/AKfycby8dDBtrglopPp6H0t6wZoWZ4liela5CykQ6pEKFhXcQ6WbwJcw2gC93Ao_auCxWM1A/exec"; 
     
     let expenses = [];
     let isTransferMode = false;
 
     window.onload = function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = today;
         refreshData();
-        // Set date to today
-        document.getElementById('date').value = new Date().toISOString().split('T')[0];
     };
 
     function toggleTransferMode() {
@@ -321,60 +335,84 @@
         if (isTransferMode) {
             formSection.classList.add('transfer-mode');
             btn.classList.add('active');
+            btn.textContent = '✖️ Cancel Transfer';
             document.getElementById('formTitle').textContent = '🔄 New Internal Transfer';
             document.getElementById('payerLabel').textContent = 'Sender (Gives Money)';
             normalFields.forEach(el => el.style.display = 'none');
             transferFields.forEach(el => el.style.display = 'flex');
-            document.getElementById('category').value = 'Miscellaneous'; // Optional: Set a default category for transfer simplicity
-            document.getElementById('status').value = 'Approved'; 
         } else {
             formSection.classList.remove('transfer-mode');
             btn.classList.remove('active');
+            btn.textContent = '🔄 Internal Transfer';
             document.getElementById('formTitle').textContent = '➕ Add Expense';
             document.getElementById('payerLabel').textContent = 'Who Paid';
             normalFields.forEach(el => el.style.display = 'flex');
             transferFields.forEach(el => el.style.display = 'none');
         }
+        clearForm();
     }
 
     async function refreshData() {
         document.getElementById('loader').style.display = 'flex';
         try {
             const res = await fetch(API_URL);
-            expenses = await res.json();
+            const data = await res.json();
+            
+            if (Array.isArray(data)) {
+                expenses = data;
+            } else {
+                console.error('Invalid data format received:', data);
+                expenses = [];
+            }
+            
             generateID();
             render();
         } catch (e) {
-            alert("Error fetching data: " + e);
+            console.error("Error fetching data:", e);
+            alert("Error fetching data: " + e.message);
+            expenses = [];
+            render();
         }
         document.getElementById('loader').style.display = 'none';
     }
 
     async function addExpense() {
         const date = document.getElementById('date').value;
-        const amount = parseFloat(document.getElementById('amount').value);
+        const amountVal = document.getElementById('amount').value;
+        const amount = parseFloat(amountVal);
         const whoPaid = document.getElementById('whoPaid').value;
         const description = document.getElementById('description').value;
         const id = document.getElementById('expenseId').value;
 
-        if(!amount || !whoPaid) { alert("Fill required fields"); return; }
-        if(isNaN(amount) || amount <= 0) { alert("Amount must be a positive number."); return; }
+        if(!date) { alert("Please select a date"); return; }
+        if(!amountVal || isNaN(amount) || amount <= 0) { 
+            alert("Please enter a valid positive amount"); 
+            return; 
+        }
+        if(!whoPaid) { alert("Please select who paid"); return; }
 
         let data = {};
 
         if (isTransferMode) {
             const receiver = document.getElementById('receiver').value;
-            if (!receiver || whoPaid === receiver) { alert("Select a valid, different Receiver!"); return; }
+            if (!receiver) { 
+                alert("Please select a receiver!"); 
+                return; 
+            }
+            if (whoPaid === receiver) { 
+                alert("Sender and Receiver cannot be the same person!"); 
+                return; 
+            }
             
             data = {
                 expenseId: id,
                 date: date,
                 category: "Internal Transfer",
-                description: description || `Transfer to ${receiver}`,
+                description: description || `Transfer from ${whoPaid} to ${receiver}`,
                 amount: amount,
-                whoPaid: whoPaid, // Sender
+                whoPaid: whoPaid,
                 payment: "Transfer",
-                vendor: receiver, // Store Receiver in Vendor column
+                vendor: receiver,
                 approvedBy: "System",
                 status: "Transfer"
             };
@@ -383,71 +421,77 @@
                 expenseId: id,
                 date: date,
                 category: document.getElementById('category').value,
-                description: description,
+                description: description || "No description",
                 amount: amount,
                 whoPaid: whoPaid,
                 payment: document.getElementById('payment').value,
-                vendor: document.getElementById('vendor').value,
+                vendor: document.getElementById('vendor').value || "N/A",
                 approvedBy: "System",
                 status: document.getElementById('status').value
             };
         }
 
         document.getElementById('loader').style.display = 'flex';
-        
-        // Optimistic update (Show immediately)
-        expenses.push(data);
-        render();
 
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ action: "add", data: data })
             });
+            
             const result = await response.json();
+            
             if(result.status === 'success') {
-                 alert("Saved to Sheets! Refreshing data.");
-                 refreshData(); // Re-fetch all data to ensure the Sheet's auto-gen data (like row number) is synced
+                alert("✅ Successfully saved to Google Sheets!");
+                clearForm();
+                await refreshData();
             } else {
-                alert("Error saving: " + result.message);
-                // Roll back optimistic update if save fails
-                expenses.pop();
-                render();
+                alert("❌ Error saving: " + (result.message || "Unknown error"));
             }
         } catch(e) {
-            alert("Network Error saving: " + e);
-            // Roll back optimistic update if save fails
-            expenses.pop();
-            render();
+            console.error("Network Error:", e);
+            alert("❌ Network Error: " + e.message);
         }
+        
         document.getElementById('loader').style.display = 'none';
     }
 
     async function clearAllData() {
-        if(confirm("Delete ALL data from Google Sheet? Cannot be undone.")) {
-            document.getElementById('loader').style.display = 'flex';
-            try {
-                const response = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "clearAll" }) });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    expenses = [];
-                    render();
-                    alert("All data cleared successfully!");
-                } else {
-                    alert("Error clearing data: " + result.message);
-                }
-            } catch(e) {
-                alert("Network Error clearing data: " + e);
-            }
-            document.getElementById('loader').style.display = 'none';
+        if(!confirm("⚠️ Delete ALL data from Google Sheet? This cannot be undone!")) {
+            return;
         }
+        
+        document.getElementById('loader').style.display = 'flex';
+        try {
+            const response = await fetch(API_URL, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "clearAll" }) 
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                expenses = [];
+                render();
+                alert("✅ All data cleared successfully!");
+            } else {
+                alert("❌ Error clearing data: " + (result.message || "Unknown error"));
+            }
+        } catch(e) {
+            console.error("Network Error:", e);
+            alert("❌ Network Error: " + e.message);
+        }
+        document.getElementById('loader').style.display = 'none';
     }
 
     function generateID() {
-        // Find the highest existing EXP number
         let maxNum = 0;
         expenses.forEach(e => {
-            if (e.expenseId && e.expenseId.startsWith('EXP')) {
+            if (e.expenseId && typeof e.expenseId === 'string' && e.expenseId.startsWith('EXP')) {
                 const num = parseInt(e.expenseId.substring(3));
                 if (!isNaN(num) && num > maxNum) {
                     maxNum = num;
@@ -464,42 +508,48 @@
         document.getElementById('description').value = '';
         document.getElementById('vendor').value = '';
         document.getElementById('receiver').value = '';
-        // Reset date to today
-        document.getElementById('date').value = new Date().toISOString().split('T')[0];
-        if(isTransferMode) toggleTransferMode(); // Reset to normal
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = today;
+        generateID();
     }
 
     function render() {
         const tbody = document.getElementById('tbody');
-        if (expenses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No data found</td></tr>';
+        
+        if (!Array.isArray(expenses) || expenses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">No transactions found. Add your first expense!</td></tr>';
             updateStats();
             return;
         }
 
-        // Show last 10 transactions descending
-        const displayList = [...expenses].reverse().slice(0, 10);
+        const displayList = [...expenses].reverse().slice(0, 20);
         
         tbody.innerHTML = displayList.map(e => {
             const isTransfer = e.category === 'Internal Transfer';
-            const badgeClass = isTransfer ? 'status-Transfer' : 'status-' + e.status;
-            const vendorDisplay = isTransfer ? `➡️ ${e.vendor}` : (e.vendor || '-');
+            const badgeClass = isTransfer ? 'status-Transfer' : 'status-' + (e.status || 'Pending');
+            const vendorDisplay = isTransfer ? `➡️ ${e.vendor || 'N/A'}` : (e.vendor || 'N/A');
             const rowStyle = isTransfer ? 'background: #f0f7ff;' : '';
 
-            // Handle date format safely
-            let displayDate = e.date;
+            let displayDate = e.date || 'N/A';
             try {
-                displayDate = new Date(e.date).toLocaleDateString();
-            } catch {}
+                if (e.date) {
+                    const dateObj = new Date(e.date);
+                    if (!isNaN(dateObj.getTime())) {
+                        displayDate = dateObj.toLocaleDateString('en-IN');
+                    }
+                }
+            } catch (err) {
+                console.error('Date parsing error:', err);
+            }
 
             return `<tr style="${rowStyle}">
                 <td>${displayDate}</td>
-                <td>${e.category}</td>
-                <td>${e.description}</td>
-                <td><b>₹${parseFloat(e.amount).toFixed(2)}</b></td>
-                <td>${e.whoPaid}</td>
+                <td><strong>${e.category || 'N/A'}</strong></td>
+                <td>${e.description || 'No description'}</td>
+                <td><strong style="color: #ff6b35;">₹${parseFloat(e.amount || 0).toFixed(2)}</strong></td>
+                <td>${e.whoPaid || 'N/A'}</td>
                 <td>${vendorDisplay}</td>
-                <td><span class="status-badge ${badgeClass}">${e.status}</span></td>
+                <td><span class="status-badge ${badgeClass}">${e.status || 'Pending'}</span></td>
             </tr>`;
         }).join('');
 
@@ -514,18 +564,12 @@
         const cats = {};
 
         expenses.forEach(e => {
-            const amt = parseFloat(e.amount);
+            const amt = parseFloat(e.amount) || 0;
 
             if (e.category === "Internal Transfer") {
-                // REVERSED INTERNAL TRANSFER LOGIC (Requested by User):
-                // Sender (e.whoPaid) INCREASES their net spending.
-                // Receiver (e.vendor) DECREASES their net spending.
-                
-                payers[e.whoPaid] = (payers[e.whoPaid] || 0) + amt; // Sender increases
-                payers[e.vendor] = (payers[e.vendor] || 0) - amt;   // Receiver decreases
-                
+                payers[e.whoPaid] = (payers[e.whoPaid] || 0) + amt;
+                payers[e.vendor] = (payers[e.vendor] || 0) - amt;
             } else {
-                // Normal Expense Logic:
                 total += amt;
                 if(e.status === 'Approved') approved += amt;
                 if(e.status === 'Pending') pending += amt;
@@ -535,90 +579,104 @@
             }
         });
 
-        // Main Stats
         document.getElementById('totalExpenses').textContent = '₹' + total.toFixed(2);
-        document.getElementById('totalCount').textContent = expenses.length + ' txns';
+        document.getElementById('totalCount').textContent = expenses.length + ' transactions';
         document.getElementById('approvedExpenses').textContent = '₹' + approved.toFixed(2);
         document.getElementById('pendingExpenses').textContent = '₹' + pending.toFixed(2);
         document.getElementById('netSpending').textContent = '₹' + total.toFixed(2);
         
-        // Payer Breakdown (Who spent how much, adjusted for transfers)
         let maxPayerValue = 0;
         Object.values(payers).forEach(val => {
             const absVal = Math.abs(val);
             if (absVal > maxPayerValue) maxPayerValue = absVal;
         });
 
-        const payerHTML = Object.entries(payers)
-            .sort((a,b) => b[1] - a[1]) // Sort by value descending
-            .map(([name, val]) => {
-                // For visualization, use the absolute value relative to the highest transaction
-                const width = maxPayerValue > 0 ? (Math.abs(val) / maxPayerValue) * 100 : 0;
-                
-                const sign = val >= 0 ? 'net-spend' : 'net-credit';
-                
-                return `
-                <div class="breakdown-item">
-                    <div class="breakdown-label">${name}</div>
-                    <div class="breakdown-bar-container"><div class="breakdown-bar" style="width:${width}%"></div></div>
-                    <div class="breakdown-stats">
-                        <div class="breakdown-amount" style="color:${val >= 0 ? '#ff6b35' : '#1976d2'}; font-weight:bold;">
-                            ₹${Math.abs(val).toFixed(2)} (${val >= 0 ? 'Net Spend' : 'Net Credit'})
-                        </div>
+        const payerEntries = Object.entries(payers).sort((a,b) => b[1] - a[1]);
+        
+        const payerHTML = payerEntries.length > 0 ? payerEntries.map(([name, val]) => {
+            const width = maxPayerValue > 0 ? (Math.abs(val) / maxPayerValue) * 100 : 0;
+            const color = val >= 0 ? '#ff6b35' : '#1976d2';
+            const label = val >= 0 ? 'Net Spend' : 'Net Credit';
+            
+            return `
+            <div class="breakdown-item">
+                <div class="breakdown-label">${name}</div>
+                <div class="breakdown-bar-container">
+                    <div class="breakdown-bar" style="width:${width}%; background: ${color};"></div>
+                </div>
+                <div class="breakdown-stats">
+                    <div style="color:${color}; font-weight:bold; font-size: 1.1em;">
+                        ₹${Math.abs(val).toFixed(2)}
                     </div>
-                </div>`;
-            }).join('');
-        document.getElementById('payerBreakdown').innerHTML = payerHTML || '<p style="text-align:center">No data</p>';
+                    <div style="font-size: 0.85em; color: #666;">${label}</div>
+                </div>
+            </div>`;
+        }).join('') : '<p style="text-align:center; color:#999; padding:20px;">No team member data yet</p>';
+        
+        document.getElementById('payerBreakdown').innerHTML = payerHTML;
 
-        // Category Breakdown
-        const catHTML = Object.entries(cats)
-            .sort((a,b) => b[1] - a[1])
-            .map(([name, val]) => {
-                const width = total > 0 ? (val / total) * 100 : 0;
-                return `
-                <div class="breakdown-item">
-                    <div class="breakdown-label">${name}</div>
-                    <div class="breakdown-bar-container"><div class="breakdown-bar" style="width:${width}%"></div></div>
-                    <div class="breakdown-stats">
-                        <div class="breakdown-amount">₹${val.toFixed(2)}</div>
-                    </div>
-                </div>`;
-            }).join('');
-        document.getElementById('categoryBreakdown').innerHTML = catHTML || '<p style="text-align:center">No data</p>';
+        const catEntries = Object.entries(cats).sort((a,b) => b[1] - a[1]);
+        
+        const catHTML = catEntries.length > 0 ? catEntries.map(([name, val]) => {
+            const width = total > 0 ? (val / total) * 100 : 0;
+            const percent = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+            
+            return `
+            <div class="breakdown-item">
+                <div class="breakdown-label">${name}</div>
+                <div class="breakdown-bar-container">
+                    <div class="breakdown-bar" style="width:${width}%"></div>
+                </div>
+                <div class="breakdown-stats">
+                    <div style="font-weight:bold; font-size: 1.1em; color: #ff6b35;">₹${val.toFixed(2)}</div>
+                    <div style="font-size: 0.85em; color: #666;">${percent}%</div>
+                </div>
+            </div>`;
+        }).join('') : '<p style="text-align:center; color:#999; padding:20px;">No category data yet</p>';
+        
+        document.getElementById('categoryBreakdown').innerHTML = catHTML;
     }
 
     function exportCSV() {
-        const headers = ['ID', 'Date', 'Category', 'Description', 'Amount', 'WhoPaid', 'Payment', 'Vendor/Receiver', 'Status', 'ApprovedBy'];
+        if (expenses.length === 0) {
+            alert("No data to export!");
+            return;
+        }
+
+        const headers = ['Expense ID', 'Date', 'Category', 'Description', 'Amount', 'Who Paid', 'Payment Method', 'Vendor/Receiver', 'Status', 'Approved By'];
         
         const csvRows = expenses.map(e => {
-            const row = headers.map(header => {
-                let value = e[header.replace('/', '')] || '';
-                // Handle complex headers for export clarity
-                if (header === 'Vendor/Receiver' && e.category === 'Internal Transfer') {
-                    value = e.vendor; 
-                } else if (header === 'Vendor/Receiver') {
-                    value = e.vendor; 
-                } else if (header === 'WhoPaid') {
-                    value = e.whoPaid;
+            return [
+                e.expenseId || '',
+                e.date || '',
+                e.category || '',
+                (e.description || '').replace(/"/g, '""'),
+                e.amount || 0,
+                e.whoPaid || '',
+                e.payment || '',
+                e.vendor || '',
+                e.status || '',
+                e.approvedBy || ''
+            ].map(field => {
+                const str = String(field);
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str}"`;
                 }
-                
-                // Escape commas and wrap in quotes
-                if (typeof value === 'string' && value.includes(',')) {
-                    return `"${value.replace(/"/g, '""')}"`;
-                }
-                return value;
-            });
-            return row.join(',');
+                return str;
+            }).join(',');
         });
 
-        const csv = headers.join(',') + '\n' + csvRows.join('\n');
+        const csv = [headers.join(','), ...csvRows].join('\n');
         
-        const blob = new Blob([csv], {type: 'text/csv'});
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = "KhanaGo_Expenses.csv";
+        a.download = `KhanaGo_Expenses_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     }
 </script>
 </body>
