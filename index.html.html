@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KhanaGo - Mobile Friendly Tracker</title>
+    <title>KhanaGo - Supabase Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -11,211 +11,301 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
             min-height: 100vh;
-            padding: 10px; /* Reduced for mobile */
+            padding: 20px;
         }
         .container {
             max-width: 1600px;
             margin: 0 auto;
             background: white;
-            border-radius: 15px; /* Slightly smaller radius for mobile */
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(255, 107, 53, 0.3);
             overflow: hidden;
         }
         .header {
             background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
             color: white;
-            padding: 20px;
+            padding: 30px;
             text-align: center;
         }
-        .header h1 { font-size: 1.8em; margin-bottom: 5px; }
-        .header p { font-size: 0.9em; opacity: 0.9; }
-
-        .content { padding: 15px; }
-
-        /* Stats Grid */
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .content { padding: 30px; }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
         .stat-card {
             background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
             color: white;
-            padding: 15px;
-            border-radius: 12px;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
         }
-        .stat-card h3 { font-size: 0.75em; opacity: 0.9; margin-bottom: 5px; text-transform: uppercase; }
-        .stat-card .amount { font-size: 1.3em; font-weight: bold; }
-        .stat-card .detail { font-size: 0.7em; opacity: 0.8; }
+        .stat-card h3 { font-size: 0.9em; opacity: 0.9; margin-bottom: 10px; text-transform: uppercase; }
+        .stat-card .amount { font-size: 2em; font-weight: bold; margin-bottom: 5px; }
+        .stat-card .detail { font-size: 0.85em; opacity: 0.85; }
         
-        /* Analytics */
         .analytics-section {
             background: #fff8f3;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #ffe5d9;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #ffe5d9;
         }
         .breakdown-container {
             display: grid;
-            grid-template-columns: 1fr; /* Stacked by default */
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
         }
-        @media (min-width: 768px) {
-            .breakdown-container { grid-template-columns: 1fr 1fr; }
-        }
-
         .breakdown-section {
             background: white;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #ffe5d9;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.15);
+            border: 2px solid #ffe5d9;
         }
         .breakdown-item {
             display: flex;
             align-items: center;
-            padding: 10px;
+            padding: 15px;
             background: #fff8f3;
             border-radius: 8px;
-            margin-bottom: 8px;
-            font-size: 0.85em;
+            margin-bottom: 10px;
         }
-        .breakdown-label { font-weight: 600; min-width: 80px; }
-        .breakdown-bar-container { flex: 1; margin: 0 10px; background: #ffe5d9; height: 8px; border-radius: 4px; }
-        .breakdown-bar { height: 100%; border-radius: 4px; }
+        .breakdown-label { font-weight: 600; color: #333; min-width: 150px; }
+        .breakdown-bar-container { flex: 1; margin: 0 15px; background: #ffe5d9; height: 10px; border-radius: 5px; overflow: hidden; }
+        .breakdown-bar { height: 100%; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); }
+        .breakdown-stats { text-align: right; min-width: 120px; }
 
-        /* Form */
         .form-section {
             background: #fff8f3;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #ffe5d9;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #ffe5d9;
+            transition: all 0.3s;
         }
+        .form-section.transfer-mode {
+            background: #e3f2fd;
+            border-color: #bbdefb;
+        }
+        .form-section.transfer-mode h2 { color: #1976d2; }
+        .form-section.transfer-mode .btn-primary { 
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); 
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
         .form-grid {
             display: grid;
-            grid-template-columns: 1fr; /* Mobile first stack */
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
         }
-        @media (min-width: 600px) {
-            .form-grid { grid-template-columns: 1fr 1fr; }
-        }
-        .form-group label { font-size: 0.85em; font-weight: 600; margin-bottom: 4px; display: block; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { margin-bottom: 8px; color: #333; font-weight: 600; }
         .form-group input, .form-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ffe5d9;
-            border-radius: 6px;
-            font-size: 16px; /* Prevents iOS zoom on focus */
+            padding: 12px;
+            border: 2px solid #ffe5d9;
+            border-radius: 8px;
         }
+        .btn { padding: 12px 30px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4); }
+        .btn-secondary { background: #6c757d; color: white; margin-right: 10px;}
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-transfer { background: white; color: #1976d2; border: 2px solid #1976d2; }
+        .btn-transfer.active { background: #1976d2; color: white; }
 
-        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
-        @media (min-width: 600px) {
-            .btn { width: auto; margin-bottom: 0; }
-        }
-        .btn-primary { background: #ff6b35; color: white; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-transfer { background: white; color: #1976d2; border: 1px solid #1976d2; }
-
-        /* Table */
-        .table-wrapper { 
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch; 
-            border-radius: 8px; 
-            border: 1px solid #ffe5d9; 
-        }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; font-size: 0.85em; }
-        th { background: #ff6b35; color: white; padding: 12px; text-align: left; white-space: nowrap; }
-        td { padding: 12px; border-bottom: 1px solid #ffe5d9; }
-        .status-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; white-space: nowrap; }
-
+        .table-section { margin-top: 30px; }
+        .table-wrapper { overflow-x: auto; border-radius: 10px; border: 2px solid #ffe5d9; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        th { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 15px; text-align: left; }
+        td { padding: 15px; border-bottom: 1px solid #ffe5d9; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
+        .status-Approved { background: #d4edda; color: #155724; }
+        .status-Pending { background: #fff3cd; color: #856404; }
+        .status-Transfer { background: #cce5ff; color: #004085; font-weight: bold; }
         .loading-overlay { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(255,255,255,0.9); z-index: 1000; justify-content: center; align-items: center; 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(255,255,255,0.9); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 2em; 
+            color: #ff6b35; 
+            font-weight: bold; 
         }
+        .button-group { margin-top: 20px; text-align: right; }
     </style>
 </head>
 <body>
 
-    <div class="loading-overlay" id="loader">🔄 Syncing...</div>
+    <div class="loading-overlay" id="loader">🔄 Syncing with Supabase...</div>
 
     <div class="container">
         <div class="header">
-            <h1>🍔 KhanaGo</h1>
-            <p>Expense & Transfer Tracker</p>
+            <h1>🍔 KhanaGo Expense Tracker</h1>
+            <p>Supabase Connected • Multi-User Settlement</p>
         </div>
 
         <div class="content">
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3>Total</h3>
-                    <div class="amount" id="totalExpenses">₹0</div>
+                    <h3>Total Expenses</h3>
+                    <div class="amount" id="totalExpenses">₹0.00</div>
+                    <div class="detail" id="totalCount">0 transactions</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Net Spending</h3>
+                    <div class="amount" id="netSpending">₹0.00</div>
+                    <div class="detail">Adjusted for Transfers</div>
                 </div>
                 <div class="stat-card">
                     <h3>Approved</h3>
-                    <div class="amount" id="approvedExpenses">₹0</div>
+                    <div class="amount" id="approvedExpenses">₹0.00</div>
                 </div>
                 <div class="stat-card">
                     <h3>Pending</h3>
-                    <div class="amount" id="pendingExpenses">₹0</div>
+                    <div class="amount" id="pendingExpenses">₹0.00</div>
                 </div>
             </div>
 
             <div class="analytics-section">
+                <h2>📊 Financial Breakdown</h2>
                 <div class="breakdown-container">
                     <div class="breakdown-section">
-                        <h4>Net Member Balances</h4>
-                        <div id="payerBreakdown"></div>
+                        <h3>Team Member Net Expenses</h3>
+                        <div id="payerBreakdown" class="breakdown-list">
+                            <p style="text-align: center; color: #999;">Loading...</p>
+                        </div>
                     </div>
                     <div class="breakdown-section">
-                        <h4>Categories</h4>
-                        <div id="categoryBreakdown"></div>
+                        <h3>Category Breakdown</h3>
+                        <div id="categoryBreakdown" class="breakdown-list">
+                            <p style="text-align: center; color: #999;">Loading...</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="form-section" id="formSection">
-                <button class="btn btn-transfer" id="toggleTransferBtn" onclick="toggleTransferMode()" style="margin-bottom: 15px;">🔄 Switch to Transfer</button>
-                <div class="form-grid">
-                    <div class="form-group"><label>ID</label><input type="text" id="expenseId" readonly></div>
-                    <div class="form-group"><label>Date</label><input type="date" id="date"></div>
-                    <div class="form-group normal-field"><label>Category</label><select id="category"><option>Food</option><option>Software</option><option>Travel</option><option>Hardware</option></select></div>
-                    <div class="form-group"><label>Amount (₹)</label><input type="number" id="amount"></div>
-                    <div class="form-group"><label id="payerLabel">Who Paid</label><select id="whoPaid"><option>Rajdeep Rao</option><option>Abhishek Rao</option><option>Arvind Singh</option></select></div>
-                    <div class="form-group transfer-field" style="display:none"><label>Receiver</label><select id="receiver"><option value="">Select</option><option>Rajdeep Rao</option><option>Abhishek Rao</option></select></div>
-                    <div class="form-group normal-field"><label>Status</label><select id="status"><option>Pending</option><option>Approved</option></select></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="formTitle">➕ Add Expense</h2>
+                    <button class="btn btn-transfer" id="toggleTransferBtn" onclick="toggleTransferMode()">🔄 Internal Transfer</button>
                 </div>
-                <div class="form-group" style="margin-top:10px;"><label>Description</label><input type="text" id="description"></div>
-                <div style="margin-top:15px;">
-                    <button class="btn btn-primary" onclick="addExpense()">Save Data</button>
-                    <button class="btn btn-secondary" onclick="clearForm()">Reset</button>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>ID</label>
+                        <input type="text" id="expenseId" readonly style="background: #eee;">
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <div class="form-group normal-field">
+                        <label>Category</label>
+                        <select id="category">
+                            <option value="Software">Software</option>
+                            <option value="Hardware">Hardware</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Travel">Travel</option>
+                            <option value="Food">Food</option>
+                            <option value="Miscellaneous">Miscellaneous</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (₹)</label>
+                        <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label id="payerLabel">Who Paid</label>
+                        <select id="whoPaid">
+                            <option value="Rajdeep Rao">Rajdeep Rao</option>
+                            <option value="Abhishek Rao">Abhishek Rao</option>
+                            <option value="Arvind Singh">Arvind Singh</option>
+                            <option value="Harshwardhan">Harshwardhan</option>
+                            <option value="Om Ji">Om Ji</option>
+                        </select>
+                    </div>
+                    <div class="form-group transfer-field" style="display: none;">
+                        <label>Receiver (Gets Money)</label>
+                        <select id="receiver">
+                            <option value="">Select Receiver</option>
+                            <option value="Rajdeep Rao">Rajdeep Rao</option>
+                            <option value="Abhishek Rao">Abhishek Rao</option>
+                            <option value="Arvind Singh">Arvind Singh</option>
+                            <option value="Harshwardhan">Harshwardhan</option>
+                            <option value="Om Ji">Om Ji</option>
+                        </select>
+                    </div>
+                    <div class="form-group normal-field">
+                        <label>Payment Method</label>
+                        <select id="payment">
+                            <option value="UPI">UPI</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Credit Card">Credit Card</option>
+                        </select>
+                    </div>
+                    <div class="form-group normal-field">
+                        <label>Vendor</label>
+                        <input type="text" id="vendor" placeholder="Vendor Name">
+                    </div>
+                    <div class="form-group normal-field">
+                        <label>Status</label>
+                        <select id="status">
+                            <option value="Approved">Approved</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="description" placeholder="Details...">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+                    <button class="btn btn-primary" onclick="addExpense()">Save to Supabase</button>
                 </div>
             </div>
 
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Who Paid</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody"></tbody>
-                </table>
-            </div>
-            
-            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-secondary" style="background:#555; flex:1" onclick="refreshData()">🔄 Refresh</button>
-                <button class="btn btn-secondary" style="background:#dc3545; flex:1" onclick="clearAllData()">🗑️ Clear All</button>
+            <div class="table-section">
+                <h2>📋 Recent Transactions</h2>
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+                    <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh Data</button>
+                    <button class="btn btn-secondary" style="background: #dc3545;" onclick="clearAllData()">🗑️ Clear Table</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Who Paid</th>
+                                <th>Vendor/Receiver</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
 <script>
+    // --- SUPABASE CONFIGURATION ---
     const SUPABASE_URL = 'https://tyhrahuionsvzyuzdtkr.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_1VBBZHGNJxdtw9fWQNI1FQ__gycCpd1';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -223,58 +313,140 @@
     let expenses = [];
     let isTransferMode = false;
 
-    window.onload = () => {
+    window.onload = function() {
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
         refreshData();
     };
 
     function toggleTransferMode() {
         isTransferMode = !isTransferMode;
+        const formSection = document.getElementById('formSection');
         const btn = document.getElementById('toggleTransferBtn');
-        document.getElementById('payerLabel').innerText = isTransferMode ? 'Sender' : 'Who Paid';
-        btn.innerText = isTransferMode ? '✖️ Normal Expense' : '🔄 Switch to Transfer';
-        document.querySelectorAll('.normal-field').forEach(e => e.style.display = isTransferMode ? 'none' : 'block');
-        document.querySelectorAll('.transfer-field').forEach(e => e.style.display = isTransferMode ? 'block' : 'none');
+        const normalFields = document.querySelectorAll('.normal-field');
+        const transferFields = document.querySelectorAll('.transfer-field');
+        
+        if (isTransferMode) {
+            formSection.classList.add('transfer-mode');
+            btn.classList.add('active');
+            btn.textContent = '✖️ Cancel Transfer';
+            document.getElementById('formTitle').textContent = '🔄 Internal Transfer';
+            document.getElementById('payerLabel').textContent = 'Sender (Gives Money)';
+            normalFields.forEach(el => el.style.display = 'none');
+            transferFields.forEach(el => el.style.display = 'flex');
+        } else {
+            formSection.classList.remove('transfer-mode');
+            btn.classList.remove('active');
+            btn.textContent = '🔄 Internal Transfer';
+            document.getElementById('formTitle').textContent = '➕ Add Expense';
+            document.getElementById('payerLabel').textContent = 'Who Paid';
+            normalFields.forEach(el => el.style.display = 'flex');
+            transferFields.forEach(el => el.style.display = 'none');
+        }
+        clearForm();
     }
 
     async function refreshData() {
         document.getElementById('loader').style.display = 'flex';
-        const { data, error } = await _supabase.from('mainlevelexpense').select('*').order('date', { ascending: false });
-        if (!error) { expenses = data; render(); generateID(); }
+        try {
+            const { data, error } = await _supabase
+                .from('mainlevelexpense')
+                .select('*')
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+            expenses = data || [];
+            generateID();
+            render();
+        } catch (e) {
+            console.error("Supabase Error:", e);
+            alert("Error: " + e.message);
+        }
         document.getElementById('loader').style.display = 'none';
     }
 
     async function addExpense() {
-        const payload = {
-            expenseId: document.getElementById('expenseId').value,
-            date: document.getElementById('date').value,
-            amount: parseFloat(document.getElementById('amount').value),
-            whoPaid: document.getElementById('whoPaid').value,
-            description: document.getElementById('description').value || "No details",
-            category: isTransferMode ? "Internal Transfer" : document.getElementById('category').value,
-            vendor: isTransferMode ? document.getElementById('receiver').value : "N/A",
-            status: isTransferMode ? "Transfer" : document.getElementById('status').value
+        const id = document.getElementById('expenseId').value;
+        const date = document.getElementById('date').value;
+        const amount = parseFloat(document.getElementById('amount').value);
+        const whoPaid = document.getElementById('whoPaid').value;
+
+        if(!date || isNaN(amount) || amount <= 0) return alert("Invalid amount or date");
+
+        let payload = {
+            expenseId: id,
+            date: date,
+            amount: amount,
+            whoPaid: whoPaid,
+            description: document.getElementById('description').value || "No description",
+            approvedBy: "System"
         };
 
-        if(!payload.amount) return alert("Enter amount");
+        if (isTransferMode) {
+            const receiver = document.getElementById('receiver').value;
+            if (!receiver || whoPaid === receiver) return alert("Select a valid receiver");
+            payload.category = "Internal Transfer";
+            payload.vendor = receiver;
+            payload.payment = "Transfer";
+            payload.status = "Transfer";
+        } else {
+            payload.category = document.getElementById('category').value;
+            payload.payment = document.getElementById('payment').value;
+            payload.vendor = document.getElementById('vendor').value || "N/A";
+            payload.status = document.getElementById('status').value;
+        }
 
         document.getElementById('loader').style.display = 'flex';
-        const { error } = await _supabase.from('mainlevelexpense').insert([payload]);
-        if(!error) { clearForm(); refreshData(); }
+        try {
+            const { error } = await _supabase.from('mainlevelexpense').insert([payload]);
+            if (error) throw error;
+            clearForm();
+            await refreshData();
+        } catch(e) {
+            alert("Save Failed: " + e.message);
+        }
         document.getElementById('loader').style.display = 'none';
+    }
+
+    function generateID() {
+        let maxNum = 0;
+        expenses.forEach(e => {
+            if (e.expenseId?.startsWith('EXP')) {
+                const num = parseInt(e.expenseId.substring(3));
+                if (num > maxNum) maxNum = num;
+            }
+        });
+        document.getElementById('expenseId').value = "EXP" + String(maxNum + 1).padStart(3, '0');
+    }
+
+    function clearForm() {
+        document.getElementById('amount').value = '';
+        document.getElementById('description').value = '';
+        document.getElementById('vendor').value = '';
+        document.getElementById('receiver').value = '';
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        generateID();
     }
 
     function render() {
         const tbody = document.getElementById('tbody');
-        tbody.innerHTML = expenses.map(e => `
-            <tr>
+        if (expenses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No data found.</td></tr>';
+            updateStats();
+            return;
+        }
+
+        tbody.innerHTML = expenses.map(e => {
+            const isTransfer = e.category === 'Internal Transfer';
+            return `<tr style="${isTransfer ? 'background: #f0f7ff;' : ''}">
                 <td>${e.date}</td>
                 <td><strong>${e.category}</strong></td>
-                <td>₹${parseFloat(e.amount).toLocaleString()}</td>
-                <td>${e.whoPaid}</td>
                 <td>${e.description}</td>
-            </tr>
-        `).join('');
+                <td><strong style="color: #ff6b35;">₹${parseFloat(e.amount).toFixed(2)}</strong></td>
+                <td>${e.whoPaid}</td>
+                <td>${isTransfer ? '➡️ ' + e.vendor : e.vendor}</td>
+                <td><span class="status-badge status-${e.status}">${e.status}</span></td>
+            </tr>`;
+        }).join('');
         updateStats();
     }
 
@@ -284,49 +456,59 @@
 
         expenses.forEach(e => {
             const amt = parseFloat(e.amount) || 0;
-            if (e.category !== "Internal Transfer") {
+            if (e.category === "Internal Transfer") {
+                payers[e.whoPaid] = (payers[e.whoPaid] || 0) + amt;
+                payers[e.vendor] = (payers[e.vendor] || 0) - amt;
+            } else {
                 total += amt;
                 if(e.status === 'Approved') approved += amt;
                 if(e.status === 'Pending') pending += amt;
+                payers[e.whoPaid] = (payers[e.whoPaid] || 0) + amt;
                 cats[e.category] = (cats[e.category] || 0) + amt;
             }
-            payers[e.whoPaid] = (payers[e.whoPaid] || 0) + amt;
-            if (e.category === "Internal Transfer") payers[e.vendor] = (payers[e.vendor] || 0) - amt;
         });
 
-        document.getElementById('totalExpenses').innerText = '₹' + total.toLocaleString();
-        document.getElementById('approvedExpenses').innerText = '₹' + approved.toLocaleString();
-        document.getElementById('pendingExpenses').innerText = '₹' + pending.toLocaleString();
+        document.getElementById('totalExpenses').textContent = '₹' + total.toFixed(2);
+        document.getElementById('approvedExpenses').textContent = '₹' + approved.toFixed(2);
+        document.getElementById('pendingExpenses').textContent = '₹' + pending.toFixed(2);
+        document.getElementById('netSpending').textContent = '₹' + total.toFixed(2);
+        document.getElementById('totalCount').textContent = expenses.length + ' transactions';
 
-        renderBars('payerBreakdown', payers);
-        renderBars('categoryBreakdown', cats);
+        // Render Bars
+        renderBars('payerBreakdown', payers, total, true);
+        renderBars('categoryBreakdown', cats, total, false);
     }
 
-    function renderBars(id, map) {
-        const entries = Object.entries(map);
-        document.getElementById(id).innerHTML = entries.map(([k, v]) => `
+    function renderBars(elementId, dataMap, total, isPayer) {
+        const entries = Object.entries(dataMap).sort((a,b) => b[1] - a[1]);
+        let maxVal = Math.max(...entries.map(e => Math.abs(e[1])), 1);
+
+        document.getElementById(elementId).innerHTML = entries.map(([name, val]) => {
+            const width = (Math.abs(val) / maxVal) * 100;
+            const color = val >= 0 ? '#ff6b35' : '#1976d2';
+            return `
             <div class="breakdown-item">
-                <div class="breakdown-label">${k}</div>
-                <div class="breakdown-bar-container"><div class="breakdown-bar" style="width:70%; background:#ff6b35"></div></div>
-                <div>₹${Math.abs(v).toLocaleString()}</div>
-            </div>
-        `).join('');
-    }
-
-    function generateID() {
-        const last = expenses.length > 0 ? parseInt(expenses[0].expenseId.replace('EXP','')) : 0;
-        document.getElementById('expenseId').value = "EXP" + String(last + 1).padStart(3, '0');
-    }
-
-    function clearForm() {
-        document.getElementById('amount').value = '';
-        document.getElementById('description').value = '';
+                <div class="breakdown-label">${name}</div>
+                <div class="breakdown-bar-container"><div class="breakdown-bar" style="width:${width}%; background:${color}"></div></div>
+                <div class="breakdown-stats"><strong>₹${Math.abs(val).toFixed(2)}</strong></div>
+            </div>`;
+        }).join('') || '<p style="text-align:center; color:#999;">No data</p>';
     }
 
     async function clearAllData() {
-        if(!confirm("Wipe all data?")) return;
-        await _supabase.from('mainlevelexpense').delete().neq('id', 0);
-        refreshData();
+        if(!confirm("⚠️ Delete ALL data from Supabase?")) return;
+        const { error } = await _supabase.from('mainlevelexpense').delete().neq('id', 0);
+        if(!error) refreshData();
+        else alert("Clear failed: " + error.message);
+    }
+
+    function exportCSV() {
+        const headers = ['ID', 'Date', 'Category', 'Description', 'Amount', 'Who Paid', 'Vendor', 'Status'];
+        const csv = [headers.join(','), ...expenses.map(e => [e.expenseId, e.date, e.category, e.description, e.amount, e.whoPaid, e.vendor, e.status].join(','))].join('\n');
+        const blob = new Blob([csv], {type: 'text/csv'});
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'KhanaGo_Export.csv'; a.click();
     }
 </script>
 </body>
