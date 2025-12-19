@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KhanaGo - Connected Tracker</title>
+    <title>KhanaGo - Supabase Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -146,12 +147,12 @@
 </head>
 <body>
 
-    <div class="loading-overlay" id="loader">🔄 Syncing with Sheets...</div>
+    <div class="loading-overlay" id="loader">🔄 Syncing with Supabase...</div>
 
     <div class="container">
         <div class="header">
             <h1>🍔 KhanaGo Expense Tracker</h1>
-            <p>Google Sheets Connected • With Settlement Logic</p>
+            <p>Supabase Connected • Multi-User Settlement</p>
         </div>
 
         <div class="content">
@@ -181,7 +182,6 @@
                 <div class="breakdown-container">
                     <div class="breakdown-section">
                         <h3>Team Member Net Expenses</h3>
-                        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">*Adjusted for Internal Transfers</p>
                         <div id="payerBreakdown" class="breakdown-list">
                             <p style="text-align: center; color: #999;">Loading...</p>
                         </div>
@@ -204,13 +204,12 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>ID</label>
-                        <input type="text" id="expenseId" placeholder="Auto-generated" readonly style="background: #eee;">
+                        <input type="text" id="expenseId" readonly style="background: #eee;">
                     </div>
                     <div class="form-group">
                         <label>Date</label>
                         <input type="date" id="date" required>
                     </div>
-                    
                     <div class="form-group normal-field">
                         <label>Category</label>
                         <select id="category">
@@ -223,12 +222,10 @@
                             <option value="Miscellaneous">Miscellaneous</option>
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label>Amount (₹)</label>
                         <input type="number" id="amount" step="0.01" placeholder="0.00" required>
                     </div>
-
                     <div class="form-group">
                         <label id="payerLabel">Who Paid</label>
                         <select id="whoPaid">
@@ -239,7 +236,6 @@
                             <option value="Om Ji">Om Ji</option>
                         </select>
                     </div>
-
                     <div class="form-group transfer-field" style="display: none;">
                         <label>Receiver (Gets Money)</label>
                         <select id="receiver">
@@ -251,7 +247,6 @@
                             <option value="Om Ji">Om Ji</option>
                         </select>
                     </div>
-
                     <div class="form-group normal-field">
                         <label>Payment Method</label>
                         <select id="payment">
@@ -260,12 +255,10 @@
                             <option value="Credit Card">Credit Card</option>
                         </select>
                     </div>
-
                     <div class="form-group normal-field">
                         <label>Vendor</label>
                         <input type="text" id="vendor" placeholder="Vendor Name">
                     </div>
-
                     <div class="form-group normal-field">
                         <label>Status</label>
                         <select id="status">
@@ -274,15 +267,13 @@
                         </select>
                     </div>
                 </div>
-                
                 <div class="form-group">
                     <label>Description</label>
                     <input type="text" id="description" placeholder="Details...">
                 </div>
-
                 <div class="button-group">
                     <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
-                    <button class="btn btn-primary" onclick="addExpense()">Save to Sheets</button>
+                    <button class="btn btn-primary" onclick="addExpense()">Save to Supabase</button>
                 </div>
             </div>
 
@@ -291,7 +282,7 @@
                 <div style="margin-bottom: 15px;">
                     <button class="btn btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
                     <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh Data</button>
-                    <button class="btn btn-secondary" style="background: #dc3545;" onclick="clearAllData()">🗑️ Clear Sheet</button>
+                    <button class="btn btn-secondary" style="background: #dc3545;" onclick="clearAllData()">🗑️ Clear Table</button>
                 </div>
                 <div class="table-wrapper">
                     <table>
@@ -301,8 +292,8 @@
                                 <th>Type</th>
                                 <th>Description</th>
                                 <th>Amount</th>
-                                <th>Who Paid / Sender</th>
-                                <th>Vendor / Receiver</th>
+                                <th>Who Paid</th>
+                                <th>Vendor/Receiver</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -314,14 +305,16 @@
     </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycby8dDBtrglopPp6H0t6wZoWZ4liela5CykQ6pEKFhXcQ6WbwJcw2gC93Ao_auCxWM1A/exec"; 
-    
+    // --- SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = 'https://tyhrahuionsvzyuzdtkr.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_1VBBZHGNJxdtw9fWQNI1FQ__gycCpd1';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     let expenses = [];
     let isTransferMode = false;
 
     window.onload = function() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date').value = today;
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
         refreshData();
     };
 
@@ -336,7 +329,7 @@
             formSection.classList.add('transfer-mode');
             btn.classList.add('active');
             btn.textContent = '✖️ Cancel Transfer';
-            document.getElementById('formTitle').textContent = '🔄 New Internal Transfer';
+            document.getElementById('formTitle').textContent = '🔄 Internal Transfer';
             document.getElementById('payerLabel').textContent = 'Sender (Gives Money)';
             normalFields.forEach(el => el.style.display = 'none');
             transferFields.forEach(el => el.style.display = 'flex');
@@ -355,181 +348,61 @@
     async function refreshData() {
         document.getElementById('loader').style.display = 'flex';
         try {
-            const res = await fetch(API_URL);
-            const data = await res.json();
-            
-            if (Array.isArray(data)) {
-                expenses = data;
-            } else {
-                console.error('Invalid data format received:', data);
-                expenses = [];
-            }
-            
+            const { data, error } = await _supabase
+                .from('mainlevelexpense')
+                .select('*')
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+            expenses = data || [];
             generateID();
             render();
         } catch (e) {
-            console.error("Error fetching data:", e);
-            alert("Error fetching data: " + e.message);
-            expenses = [];
-            render();
+            console.error("Supabase Error:", e);
+            alert("Error: " + e.message);
         }
         document.getElementById('loader').style.display = 'none';
     }
 
     async function addExpense() {
-        const date = document.getElementById('date').value;
-        const amountVal = document.getElementById('amount').value;
-        const amount = parseFloat(amountVal);
-        const whoPaid = document.getElementById('whoPaid').value;
-        const description = document.getElementById('description').value;
         const id = document.getElementById('expenseId').value;
+        const date = document.getElementById('date').value;
+        const amount = parseFloat(document.getElementById('amount').value);
+        const whoPaid = document.getElementById('whoPaid').value;
 
-        if(!date) { alert("Please select a date"); return; }
-        if(!amountVal || isNaN(amount) || amount <= 0) { 
-            alert("Please enter a valid positive amount"); 
-            return; 
-        }
-        if(!whoPaid) { alert("Please select who paid"); return; }
+        if(!date || isNaN(amount) || amount <= 0) return alert("Invalid amount or date");
 
-        let data = {};
+        let payload = {
+            expenseId: id,
+            date: date,
+            amount: amount,
+            whoPaid: whoPaid,
+            description: document.getElementById('description').value || "No description",
+            approvedBy: "System"
+        };
 
         if (isTransferMode) {
             const receiver = document.getElementById('receiver').value;
-            if (!receiver) { 
-                alert("Please select a receiver!"); 
-                return; 
-            }
-            if (whoPaid === receiver) { 
-                alert("Sender and Receiver cannot be the same person!"); 
-                return; 
-            }
-            
-            data = {
-                expenseId: id,
-                date: date,
-                category: "Internal Transfer",
-                description: description || `Transfer from ${whoPaid} to ${receiver}`,
-                amount: amount,
-                whoPaid: whoPaid,
-                payment: "Transfer",
-                vendor: receiver,
-                approvedBy: "System",
-                status: "Transfer"
-            };
+            if (!receiver || whoPaid === receiver) return alert("Select a valid receiver");
+            payload.category = "Internal Transfer";
+            payload.vendor = receiver;
+            payload.payment = "Transfer";
+            payload.status = "Transfer";
         } else {
-            data = {
-                expenseId: id,
-                date: date,
-                category: document.getElementById('category').value,
-                description: description || "No description",
-                amount: amount,
-                whoPaid: whoPaid,
-                payment: document.getElementById('payment').value,
-                vendor: document.getElementById('vendor').value || "N/A",
-                approvedBy: "System",
-                status: document.getElementById('status').value
-            };
+            payload.category = document.getElementById('category').value;
+            payload.payment = document.getElementById('payment').value;
+            payload.vendor = document.getElementById('vendor').value || "N/A";
+            payload.status = document.getElementById('status').value;
         }
 
         document.getElementById('loader').style.display = 'flex';
-
         try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "add", data: data })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const responseText = await response.text();
-            console.log("Raw response:", responseText);
-            
-            // Try to parse JSON, but if it fails, assume success if data was saved
-            let result;
-            try {
-                // Clean up response text - remove any HTML or non-JSON content
-                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    result = JSON.parse(jsonMatch[0]);
-                } else {
-                    // If no JSON found but response is ok, assume success
-                    console.warn("No JSON in response, assuming success");
-                    result = { status: 'success' };
-                }
-            } catch (parseError) {
-                console.warn("JSON parse failed, assuming success since fetch succeeded:", parseError);
-                // If parsing fails but fetch succeeded, assume data was saved
-                result = { status: 'success' };
-            }
-            
-            if(result.status === 'success' || result.result === 'success') {
-                alert("✅ Successfully saved to Google Sheets!");
-                clearForm();
-                await refreshData();
-            } else if (result.status === 'error') {
-                alert("❌ Error saving: " + (result.message || "Unknown error"));
-            } else {
-                // If status is unclear but fetch succeeded, assume success
-                alert("✅ Data saved! (Response format unclear, refreshing data...)");
-                clearForm();
-                await refreshData();
-            }
+            const { error } = await _supabase.from('mainlevelexpense').insert([payload]);
+            if (error) throw error;
+            clearForm();
+            await refreshData();
         } catch(e) {
-            console.error("Network Error:", e);
-            alert("❌ Network Error: " + e.message);
-        }
-        
-        document.getElementById('loader').style.display = 'none';
-    }
-
-    async function clearAllData() {
-        if(!confirm("⚠️ Delete ALL data from Google Sheet? This cannot be undone!")) {
-            return;
-        }
-        
-        document.getElementById('loader').style.display = 'flex';
-        try {
-            const response = await fetch(API_URL, { 
-                method: 'POST',
-                body: JSON.stringify({ action: "clearAll" }) 
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const responseText = await response.text();
-            console.log("Clear response:", responseText);
-            
-            let result;
-            try {
-                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    result = JSON.parse(jsonMatch[0]);
-                } else {
-                    result = { status: 'success' };
-                }
-            } catch (parseError) {
-                console.warn("JSON parse failed, assuming success:", parseError);
-                result = { status: 'success' };
-            }
-            
-            if (result.status === 'success' || result.result === 'success') {
-                expenses = [];
-                render();
-                alert("✅ All data cleared successfully!");
-            } else if (result.status === 'error') {
-                alert("❌ Error clearing data: " + (result.message || "Unknown error"));
-            } else {
-                expenses = [];
-                render();
-                alert("✅ Data cleared! (Response format unclear, refreshing...)");
-            }
-        } catch(e) {
-            console.error("Network Error:", e);
-            alert("❌ Network Error: " + e.message);
+            alert("Save Failed: " + e.message);
         }
         document.getElementById('loader').style.display = 'none';
     }
@@ -537,16 +410,12 @@
     function generateID() {
         let maxNum = 0;
         expenses.forEach(e => {
-            if (e.expenseId && typeof e.expenseId === 'string' && e.expenseId.startsWith('EXP')) {
+            if (e.expenseId?.startsWith('EXP')) {
                 const num = parseInt(e.expenseId.substring(3));
-                if (!isNaN(num) && num > maxNum) {
-                    maxNum = num;
-                }
+                if (num > maxNum) maxNum = num;
             }
         });
-
-        const newNum = maxNum + 1;
-        document.getElementById('expenseId').value = "EXP" + String(newNum).padStart(3, '0');
+        document.getElementById('expenseId').value = "EXP" + String(maxNum + 1).padStart(3, '0');
     }
 
     function clearForm() {
@@ -554,64 +423,39 @@
         document.getElementById('description').value = '';
         document.getElementById('vendor').value = '';
         document.getElementById('receiver').value = '';
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date').value = today;
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
         generateID();
     }
 
     function render() {
         const tbody = document.getElementById('tbody');
-        
-        if (!Array.isArray(expenses) || expenses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">No transactions found. Add your first expense!</td></tr>';
+        if (expenses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">No data found.</td></tr>';
             updateStats();
             return;
         }
 
-        const displayList = [...expenses].reverse().slice(0, 20);
-        
-        tbody.innerHTML = displayList.map(e => {
+        tbody.innerHTML = expenses.map(e => {
             const isTransfer = e.category === 'Internal Transfer';
-            const badgeClass = isTransfer ? 'status-Transfer' : 'status-' + (e.status || 'Pending');
-            const vendorDisplay = isTransfer ? `➡️ ${e.vendor || 'N/A'}` : (e.vendor || 'N/A');
-            const rowStyle = isTransfer ? 'background: #f0f7ff;' : '';
-
-            let displayDate = e.date || 'N/A';
-            try {
-                if (e.date) {
-                    const dateObj = new Date(e.date);
-                    if (!isNaN(dateObj.getTime())) {
-                        displayDate = dateObj.toLocaleDateString('en-IN');
-                    }
-                }
-            } catch (err) {
-                console.error('Date parsing error:', err);
-            }
-
-            return `<tr style="${rowStyle}">
-                <td>${displayDate}</td>
-                <td><strong>${e.category || 'N/A'}</strong></td>
-                <td>${e.description || 'No description'}</td>
-                <td><strong style="color: #ff6b35;">₹${parseFloat(e.amount || 0).toFixed(2)}</strong></td>
-                <td>${e.whoPaid || 'N/A'}</td>
-                <td>${vendorDisplay}</td>
-                <td><span class="status-badge ${badgeClass}">${e.status || 'Pending'}</span></td>
+            return `<tr style="${isTransfer ? 'background: #f0f7ff;' : ''}">
+                <td>${e.date}</td>
+                <td><strong>${e.category}</strong></td>
+                <td>${e.description}</td>
+                <td><strong style="color: #ff6b35;">₹${parseFloat(e.amount).toFixed(2)}</strong></td>
+                <td>${e.whoPaid}</td>
+                <td>${isTransfer ? '➡️ ' + e.vendor : e.vendor}</td>
+                <td><span class="status-badge status-${e.status}">${e.status}</span></td>
             </tr>`;
         }).join('');
-
         updateStats();
     }
 
     function updateStats() {
-        let total = 0;
-        let approved = 0;
-        let pending = 0;
-        const payers = {}; 
-        const cats = {};
+        let total = 0, approved = 0, pending = 0;
+        const payers = {}, cats = {};
 
         expenses.forEach(e => {
             const amt = parseFloat(e.amount) || 0;
-
             if (e.category === "Internal Transfer") {
                 payers[e.whoPaid] = (payers[e.whoPaid] || 0) + amt;
                 payers[e.vendor] = (payers[e.vendor] || 0) - amt;
@@ -619,110 +463,52 @@
                 total += amt;
                 if(e.status === 'Approved') approved += amt;
                 if(e.status === 'Pending') pending += amt;
-
                 payers[e.whoPaid] = (payers[e.whoPaid] || 0) + amt;
                 cats[e.category] = (cats[e.category] || 0) + amt;
             }
         });
 
         document.getElementById('totalExpenses').textContent = '₹' + total.toFixed(2);
-        document.getElementById('totalCount').textContent = expenses.length + ' transactions';
         document.getElementById('approvedExpenses').textContent = '₹' + approved.toFixed(2);
         document.getElementById('pendingExpenses').textContent = '₹' + pending.toFixed(2);
         document.getElementById('netSpending').textContent = '₹' + total.toFixed(2);
-        
-        let maxPayerValue = 0;
-        Object.values(payers).forEach(val => {
-            const absVal = Math.abs(val);
-            if (absVal > maxPayerValue) maxPayerValue = absVal;
-        });
+        document.getElementById('totalCount').textContent = expenses.length + ' transactions';
 
-        const payerEntries = Object.entries(payers).sort((a,b) => b[1] - a[1]);
-        
-        const payerHTML = payerEntries.length > 0 ? payerEntries.map(([name, val]) => {
-            const width = maxPayerValue > 0 ? (Math.abs(val) / maxPayerValue) * 100 : 0;
+        // Render Bars
+        renderBars('payerBreakdown', payers, total, true);
+        renderBars('categoryBreakdown', cats, total, false);
+    }
+
+    function renderBars(elementId, dataMap, total, isPayer) {
+        const entries = Object.entries(dataMap).sort((a,b) => b[1] - a[1]);
+        let maxVal = Math.max(...entries.map(e => Math.abs(e[1])), 1);
+
+        document.getElementById(elementId).innerHTML = entries.map(([name, val]) => {
+            const width = (Math.abs(val) / maxVal) * 100;
             const color = val >= 0 ? '#ff6b35' : '#1976d2';
-            const label = val >= 0 ? 'Net Spend' : 'Net Credit';
-            
             return `
             <div class="breakdown-item">
                 <div class="breakdown-label">${name}</div>
-                <div class="breakdown-bar-container">
-                    <div class="breakdown-bar" style="width:${width}%; background: ${color};"></div>
-                </div>
-                <div class="breakdown-stats">
-                    <div style="color:${color}; font-weight:bold; font-size: 1.1em;">
-                        ₹${Math.abs(val).toFixed(2)}
-                    </div>
-                    <div style="font-size: 0.85em; color: #666;">${label}</div>
-                </div>
+                <div class="breakdown-bar-container"><div class="breakdown-bar" style="width:${width}%; background:${color}"></div></div>
+                <div class="breakdown-stats"><strong>₹${Math.abs(val).toFixed(2)}</strong></div>
             </div>`;
-        }).join('') : '<p style="text-align:center; color:#999; padding:20px;">No team member data yet</p>';
-        
-        document.getElementById('payerBreakdown').innerHTML = payerHTML;
+        }).join('') || '<p style="text-align:center; color:#999;">No data</p>';
+    }
 
-        const catEntries = Object.entries(cats).sort((a,b) => b[1] - a[1]);
-        
-        const catHTML = catEntries.length > 0 ? catEntries.map(([name, val]) => {
-            const width = total > 0 ? (val / total) * 100 : 0;
-            const percent = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-            
-            return `
-            <div class="breakdown-item">
-                <div class="breakdown-label">${name}</div>
-                <div class="breakdown-bar-container">
-                    <div class="breakdown-bar" style="width:${width}%"></div>
-                </div>
-                <div class="breakdown-stats">
-                    <div style="font-weight:bold; font-size: 1.1em; color: #ff6b35;">₹${val.toFixed(2)}</div>
-                    <div style="font-size: 0.85em; color: #666;">${percent}%</div>
-                </div>
-            </div>`;
-        }).join('') : '<p style="text-align:center; color:#999; padding:20px;">No category data yet</p>';
-        
-        document.getElementById('categoryBreakdown').innerHTML = catHTML;
+    async function clearAllData() {
+        if(!confirm("⚠️ Delete ALL data from Supabase?")) return;
+        const { error } = await _supabase.from('mainlevelexpense').delete().neq('id', 0);
+        if(!error) refreshData();
+        else alert("Clear failed: " + error.message);
     }
 
     function exportCSV() {
-        if (expenses.length === 0) {
-            alert("No data to export!");
-            return;
-        }
-
-        const headers = ['Expense ID', 'Date', 'Category', 'Description', 'Amount', 'Who Paid', 'Payment Method', 'Vendor/Receiver', 'Status', 'Approved By'];
-        
-        const csvRows = expenses.map(e => {
-            return [
-                e.expenseId || '',
-                e.date || '',
-                e.category || '',
-                (e.description || '').replace(/"/g, '""'),
-                e.amount || 0,
-                e.whoPaid || '',
-                e.payment || '',
-                e.vendor || '',
-                e.status || '',
-                e.approvedBy || ''
-            ].map(field => {
-                const str = String(field);
-                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                    return `"${str}"`;
-                }
-                return str;
-            }).join(',');
-        });
-
-        const csv = [headers.join(','), ...csvRows].join('\n');
-        
-        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const headers = ['ID', 'Date', 'Category', 'Description', 'Amount', 'Who Paid', 'Vendor', 'Status'];
+        const csv = [headers.join(','), ...expenses.map(e => [e.expenseId, e.date, e.category, e.description, e.amount, e.whoPaid, e.vendor, e.status].join(','))].join('\n');
+        const blob = new Blob([csv], {type: 'text/csv'});
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `KhanaGo_Expenses_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        a.href = url; a.download = 'KhanaGo_Export.csv'; a.click();
     }
 </script>
 </body>
